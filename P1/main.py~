@@ -1,0 +1,39 @@
+import scipy
+import math
+import numpy as np
+from scipy.io.arff import loadarff
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import StratifiedKFold
+
+
+def loadDataSet( arg ):
+    data_struct = loadarff(str)[0]
+    data_labels = data_struct['class']
+    data = rfn.drop_fields(data_struct, 'class').view(
+        np.float64).reshape(data_struct.shape+(-1,))
+
+    return data, data_labels
+
+def distance(e1,e2):
+    return np.sqrt(np.sum(np.power(e1-e2,2)))
+
+def nearestNeighbour(element,neighbours,classes):
+    return classes[np.argmin(distance(element,neighbours))]
+
+def main():
+    n1 = 'Datasets/ionosphere.arff'
+    data,labels = loadDataSet(n1)
+
+    data = MinMaxScaler().fit_transform(data)
+
+    skf = StratifiedKFold(n_splits = 5)
+
+    for trainIndex,testIndex in skf.split(data, labels):
+        n = testIndex.shape[0]
+        onennRight = 0
+
+        for element in testIndex:
+            if nearestNeighbour(data[element],data[trainIndex],labels[trainIndex] == labels[element]:
+                                onennRight +=1
+        print("Accuracy: ", onennRight/n)
+                

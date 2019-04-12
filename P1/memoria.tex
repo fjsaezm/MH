@@ -1,0 +1,361 @@
+\documentclass[11pt]{article}
+%Gummi|065|=)
+
+\usepackage[left=3cm,top=3.5cm,right=3cm,bottom=3.5cm]{geometry} 
+\setlength\parindent{0pt}
+
+\usepackage{amsmath}
+\usepackage{algorithm}
+
+
+\usepackage[noend]{algpseudocode}
+
+\makeatletter
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
+
+
+\title{\textbf{Aprendizaje de pesos en características}}
+\author{Javier Sáez Maldonado}
+\date{}
+\newcommand{\plogo}{\fbox{$\mathcal{PL}$}} % Generic dummy publisher logo
+\begin{document}
+
+\begin{titlepage} % Suppresses headers and footers on the title page
+
+	\centering % Centre everything on the title page
+	
+	\scshape % Use small caps for all text on the title page
+	
+	\vspace*{\baselineskip} % White space at the top of the page
+	
+	%------------------------------------------------
+	%	Title
+	%------------------------------------------------
+	
+	\rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal rule
+	\rule{\textwidth}{0.4pt} % Thin horizontal rule
+	
+	\vspace{0.75\baselineskip} % Whitespace above the title
+	
+	{\LARGE APRENDIZAJE DE \\ PESOS EN CARACTERÍSTICAS } % Title
+	
+	\vspace{0.75\baselineskip} % Whitespace below the title
+	
+	\rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal rule
+	\rule{\textwidth}{1.6pt} % Thick horizontal rule
+	
+	\vspace{2\baselineskip} % Whitespace after the title block
+	
+	%------------------------------------------------
+	%	Subtitle
+	%------------------------------------------------
+	
+
+	
+	\vspace*{3\baselineskip} % Whitespace under the subtitle
+	
+	%------------------------------------------------
+	%	Editor(s)
+	%------------------------------------------------
+	
+
+	
+	\vspace{9\baselineskip} % Whitespace before the editors
+	
+	{\scshape\Large Javier Sáez Maldonado} % Editor list
+	
+	\vspace{0.5\baselineskip} % Whitespace below the editor list
+	\textit{77448344F}\\
+	\textit{fjaviersaezm@correo.ugr.es}\\
+	\textit{Universidad de Granada} % Editor affiliation
+	
+	\vfill % Whitespace between editor names and publisher logo
+	
+	%------------------------------------------------
+	%	Publisher
+	%------------------------------------------------
+	
+	
+	2019 % Publication year
+	
+
+
+\end{titlepage}
+
+\section*{Nota previa}
+La ejecución del programa que he escrito en python es \emph{demasiado} lenta. El tiempo medio de ejecución completa es de 25 minutos en mi ordenador portátil que dispone de \emph{Intel Core i7-4510U CPU @ 2.00GHz x 4 } y el sistema operativo Manjaro Linux. Es por ello que se recomienda que no se ejecute el programa o se modifique si se quiere comprobar el funcionamiento.
+
+\section{Introducción}
+El problema de clasificación consiste en, dado un conjunto $A=\{(a,b) \ : a \in R^n, b \ es \ una \ clase\}$ de datos ya clasificados, obtener un sistema que permita clasificar un objeto nuevo de forma automática.\\
+
+ Un ejemplo de clasificador, y el que utilizaremos en esta práctica,es el $k-NN$ , $k$ vecinos más cercanos. Este toma la clase que más se repita entre los $u_i\in A$ tales que su distancia al nuevo elemento $u$ sea mínima. En nuestro caso, en una versión sencilla del problema, consideraremos el clasificador $1-NN$. \\
+
+Consideraremos como distancias la distancia trivial si las características son discretas (esto es, la distancia será 1 si las características son diferentes, y 0 si son iguales. La denotamos como $d_n$), y la distancia euclídea para características que sean continuas. Además, cada característica tendrá un peso asociado, por lo que dado un vector de pesos $w$, la distancia entre dos vectores $u$ y $v$ será de la forma:
+\[
+d(u,v) = \sqrt {\sum_i w_i(u_i- v_i)^2 + \sum_j w_j d_n(u_j,v_j)}
+\]
+
+ El aprendizaje de pesos en características consiste  en hallar un vector de pesos que maximice la siguiente función:
+\[
+F(w) = \alpha T_{clas}(w) + (1-\alpha)T_{red}(w)
+\]
+Donde
+\begin{itemize}
+\item $T_{clas}$ es la función que indica cómo de bueno es nuestro clasificador, es decir, cuántos casos ha clasificado correctamente si entrenamos el clasificador usando el resto de datos ,la técnica \emph{k-fold cross validation}, y dejando un elemento fuera (leave one out).
+	\item $T_{red}$ que es la función que nos indica cuántas características de un dato tienen un peso menor que un valor establecido, en nuestro caso $0.2$.
+\end{itemize}
+
+
+\section{Descripción de la aplicación de los algoritmos}
+Vamos a describir las consideraciones, tipos y operaciones comunes en los algoritmos de nuestra práctica.
+
+\subsection{Esquemas de representación}
+Los datos de entrada que tenemos para nuestro problema tienen los siguientes elementos:
+\begin{itemize}
+	\item Vector de características, que es un vector de valores reales que trataremos de normalizar al intervalo $[0,1]$ para trabajar con ellos.
+	\item Clase del elemento, que es la categoría a la que corresponde el mismo
+	\item Ejemplo, que es un par que tiene un vector de características y una clase
+	\item Conjunto de datos, que contendrá una lista de ejemplos
+
+\end{itemize}
+De ellos , obtendremos una solución que será un vector $w$ de pesos, valores reales también en el intervalo $[0,1]$
+
+\subsection{Operadores comunes}
+Vamos a describir ahora dos funcionalidades comunes a todos los algoritmos que hemos utilizado para la realización de la práctica.\\
+
+La función \emph{normalizeData} se encarga de dado un vector de datos (que puede ser de tamaño 1), normalizarlos al intervalo $[0,1]$\\
+
+La función \emph{weighted$\_$onenn} es la función que nos da el vecino más cercano a otro utilizando el algoritmo $1-NN$, usando un vector de pesos dado. La utilizaremos dando diferentes vectores de pesos $w$ para obtener diferentes resultados de clasificación.\\
+
+El resto de funcionalidades que se han utilizado se han hecho en cada algoritmo concreto, debido a la facilidad que nos da el lenguaje de programación escogido para la programación de estos operadores.
+
+\subsection{Función objetivo}
+En nuestro caso, se nos indica que tomemos como $alpha$ el valor $0.5$, así que en realidad lo que estamos haciendo es:
+\[
+F(w) = 0.5(T_{clas}(w) + T_{red}(w))
+\]
+Calcularemos $T_{class}$ de la siguiente manera:\\
+\begin{algorithmic}[1]
+\Procedure{T-class}{guess,classes}
+\State n = 0
+\BState \emph{loop} : $i = 0,...,guess.size$
+\If {classes(i) = guess(i)}
+$n \gets n+1$
+\EndIf
+\BState \emph{endloop}
+\State \textbf{return} n/guess.size
+\EndProcedure
+\end{algorithmic}
+Y calcularemos $T_{red}$ así:\\
+\begin{algorithmic}[1]
+\Procedure{T-red}{w}
+\State n = 0
+\BState \emph{loop} : $i = 0,...,w.size$
+\If {w(i) $<$ 0.2}
+$n \gets n+1$
+\EndIf
+\BState \emph{endloop}
+\State \textbf{return} n/w.size
+\EndProcedure
+\end{algorithmic}
+
+
+\section{Estructura del método de búsqueda}
+\subsection{Algoritmo Greedy Relief}
+Este algoritmo recorre todo el conjunto de datos punto por punto y , en cada uno, modifica el vector de pesos según el ejemplo enemigo y amigo más cercanos. Lo que haremos será , por cada punto, partir el conjunto de datos en un conjunto de datos "amigos" (que tienen su misma clase), y "enemigos" (que no tienen su misma clase), y luego obtendremos de cada uno el "vecino más cercano". El procedimiento para obtener el conjunto de enemigos(y el de amigos, pues son idénticos) es el siguiente:\\
+
+\begin{algorithmic}[1]
+\Procedure{getEnemies}{data,dClasses,example,exampleClass}
+\BState \emph{loop} : $i = 0,...,data.size$
+\If {dClasses(i) = exampleClass}
+$enemies \gets data(i)$
+\EndIf
+\State \textbf{return} enemies
+\EndProcedure
+\end{algorithmic}
+
+
+
+Al final, implementamos la función \emph{greedyRelief}: 
+\begin{algorithm}
+\caption{Greedy Relief}\label{euclid}
+\begin{algorithmic}[1]
+\Procedure{greedyRelief}{data, classes}
+\State $w \gets 0$
+\BState \emph{loop}: $i = 0,...,data.size$
+\State $friends \gets getFriends$
+\State $enemies \gets getEnemies$
+\State $closestFriend \gets min(distance(friends,data(i))$
+\State $closestEnemy \gets min(distance(enemies,data(i))$
+\State $w \gets w + |data(i) - closestEnemy| - |data(i)-closestFriend|$
+\BState \emph{endloop}
+\State $w \gets normalize(w)$
+\State \textbf{return} w
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Búsqueda local}
+Para este algoritmo, debemos definir el algoritmo que hemos usado para obtener una mutación de un ejemplo. Al mutar, sumaremos a la componente $j$ un valor aleatorio y truncaremos al intervalo $[0,1]$ si el nuevo valor se nos escapara del intervalo:
+\begin{algorithmic}[1]
+\Procedure{mov}{w,sigma,j}
+\State $w(j) \gets w(j) + random(0,1)$
+\State $w(j) \gets Normalize(w(j))$
+\State \textbf{return} w
+\EndProcedure
+\end{algorithmic}
+En el procedimiento de cálculo de pesos mediante la búsqueda local intervendrá la función de evaluación, que será notada por $f(w)$.
+
+Así, el procedimiento general para la generación de pesos para la búsqueda local sería:
+
+
+
+
+
+\begin{algorithm}
+\caption{Local Search}\label{euclid}
+\begin{algorithmic}[1]
+\Procedure{localSearch}{initialWeight,data,classes}
+\State $w \gets initialWeight$, $initialF \gets f(w)$,
+\BState \emph{loop}  i = 0,...,data.size
+\State $copy \gets w$
+\State $copy \gets mov(copy,i,sigma)$
+\State $newF \gets f(copy)$
+\If {newF $>$ initialF}
+
+$initialF \gets new F$
+
+$w \gets copy$
+
+\EndIf
+\BState \emph{endloop}
+\State \textbf{return} w
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Para completar este algoritmo, habría que añadir un contador para que contara un número de iteraciones máximo que se pudiera hacer para generar un número máximo de vecinos , pero esto no se ha incluido en el pseudocódigo.
+
+%\subsection{Casos de comparación}
+
+
+\section{Procedimiento considerado para desarrollar la práctica}
+Para desarrollar la práctica, he usado \textbf{Python} como lenguaje de programación, sin usar ningún framework de metaheurísticas.
+
+Para poder ejecutar el código , hace falta tener instalado \emph{Numpy,Scipy} y \emph{Sklearn}. Este último es muy útil para la realización de prácticas de este estilo pues trae implementaciones de muchas funcionalidades básicas para \emph{Machine learning}.
+
+El fichero que hay que ejecutar dentro de la carpeta es el fichero \emph{\textbf{apc.py}}. Para ello, basta con escribir en la terminal:
+\[
+\textit{python apc.py}
+\]
+Tras la ejecución, comenzará a ejecutar los algoritmos sobre los 3 ficheros de datos que tenemos, que se explicarán más adelante.
+
+La lista de archivos que contiene la práctica son los siguientes:
+\begin{itemize}
+	\item \textbf{apc.py}, el fichero principal a ejecutar para la ejecución de nuestro programa.
+	\item \textbf{prepareData.py}, el fichero con las funciones que se encargan de la manipulación de los datos y la lectura para poder trabajar con ellos cómodamente.
+	\item \textbf{algorithms}, el fichero en el que se encuentran los algoritmos y algunas funciones auxiliares programadas para la práctica.
+	\item \textbf{Datasets}, una carpeta en la que se encuentran los datasets almacenados.
+	
+\end{itemize}
+
+\section{Experimentos y análisis de resultados}
+
+\subsection{Casos del problema}
+Vamos a comentar primero los ficheros que tenemos a analizar mediante nuestros algoritmos.
+
+\subsubsection{Colposcopy}
+La colposcopia es un procedimiento ginecológico que consiste en la exploración del cuello uterino. El conjunto de datos fue adquirido y anotado por médicos profesionales del Hospital Universitario de Caracas. Las imágenes fueron tomadas al azar de las secuencias colposcópicas.
+
+Este archivo tiene 287 ejemplos, de 62 atributos cada uno y dos clases (positivo o negativo)
+
+\subsubsection{Ionosphere}
+Son los datos de radar recogidos  por un sistema  en Goose Bay, Labrador. Este sistema consiste en un conjunto de fases de 16 antenas de alta frecuencia  con una potencia total transmitida  del orden de 6.4 kilovatios Los objetivos son electrones libres en la ionosfera. Los "buenos" retornos de radar son aquellos que muestran evidencia de algún tipo de estructura en la ionosfera. 
+
+Así, este conjunto de datos consta de 352 ejemplos, con 34 atributos cada uno y acompañados de dos clases, buenos y malos.
+
+\subsubsection{Texture}
+El objetivo de este conjunto de datos es distinguir entre 11 texturas diferentes, caracterizándose cada pixel por 40 atributos construidos mediante la estimación de momentos modificados de cuarto orden en cuatro orientaciones: 0,45,90 y 135 grados.
+
+Tiene este archivo 550 ejemplos de 40 atributos y consta, como ya hemos mencionado, de 11 clases diferentes, los tipos de textura.
+
+\subsection{Resultados}
+Vamos a comentar los resultados que se han obtenido. Hay que indicar que he redondeado a dos decimales. 
+Introduzco ahora las siglas de la tabla:
+\begin{itemize}
+	\item $T_{class}$ es la tasa de clasificación, porcentaje de acierto
+	\item $T_{red}$ es la tasa de reducción
+	\item $Agr$ es el valor de la función objetivo con $\alpha=0.5$
+	\item $T$ es el tiempo en segundos
+\end{itemize}
+
+Ahora, los resultados obtenidos son los siguientes: \\
+
+\textbf{1nn}\\
+
+\begin{tabular}{lllllllllllllll}
+Partition & \multicolumn{4}{c}{Colposcopy} &  & \multicolumn{4}{c}{Ionosphere} &  & \multicolumn{4}{c}{Texture}     \\
+          & T\_clas  & T\_red  & Agr   & T &  & T\_clas  & T\_red  & Agr   & T &  & T\_clas & T\_red & Agr   & T    \\
+0         & 0.8      & 0       & 0.4   & 0 &  & 0.85     & 0       & 0.42  & 0 &  & 0.95    & 0      & 0.48  & 0.01 \\
+1         & 0.72     & 0       & 0.36  & 0 &  & 0.77     & 0       & 0.39  & 0 &  & 0.94    & 0      & 0.47  & 0.01 \\
+2         & 0.74     & 0       & 0.37  & 0 &  & 0.83     & 0       & 0.41  & 0 &  & 0.92    & 0      & 0.46  & 0.01 \\
+3         & 0.77     & 0       & 0.39  & 0 &  & 0.91     & 0       & 0.46  & 0 &  & 0.93    & 0      & 0.46  & 0.01 \\
+4         & 0.67     & 0       & 0.33  & 0 &  & 0.86     & 0       & 0.43  & 0 &  & 0.9     & 0      & 0.45  & 0.01 \\
+Media     & 0.74     & 0       & 0.37  & 0 &  & 0.844    & 0       & 0.422 & 0 &  & 0.928   & 0      & 0.464 & 0.01
+\end{tabular}
+
+\textbf{Greedy}\\
+	
+\hspace{-1cm}\begin{tabular}{lllllllllllllll}
+Partition & \multicolumn{4}{c}{Colposcopy}  &  & \multicolumn{4}{c}{Ionosphere}  &  & \multicolumn{4}{c}{Texture}     \\
+          & T\_clas & T\_red & Agr   & T    &  & T\_clas & T\_red & Agr  & T     &  & T\_clas & T\_red & Agr   & T    \\
+0         & 0.66    & 0.56   & 0.66  & 0.01 &  & 0.86    & 0.03   & 0.35 & 0.02  &  & 0.97    & 0.05   & 0.5   & 0.03 \\
+1         & 0.7     & 0.42   & 0.6   & 0.01 &  & 0.79    & 0.03   & 0.35 & 0.01  &  & 0.93    & 0.07   & 0.51  & 0.03 \\
+2         & 0.77    & 0.27   & 0.53  & 0.01 &  & 0.8     & 0.09   & 0.39 & 0.01  &  & 0.94    & 0.03   & 0.48  & 0.03 \\
+3         & 0.77    & 0.32   & 0.54  & 0.01 &  & 0.91    & 0.03   & 0.35 & 0.02  &  & 0.95    & 0.05   & 0.5   & 0.03 \\
+4         & 0.72    & 0.21   & 0.48  & 0.01 &  & 0.86    & 0.03   & 0.36 & 0.01  &  & 0.92    & 0.15   & 0.55  & 0.03 \\
+Media     & 0.724   & 0.356  & 0.562 & 0.01 &  & 0.844   & 0.042  & 0.36 & 0.014 &  & 0.942   & 0.07   & 0.508 & 0.03
+\end{tabular}\\
+
+\textbf{Búsqueda Local}\\
+
+\hspace{-1.3cm}\begin{tabular}{lllllllllllllll}
+Partition & \multicolumn{4}{c}{Colposcopy}   &  & \multicolumn{4}{c}{Ionosphere}   &  & \multicolumn{4}{c}{Texture}        \\
+          & T\_clas & T\_red & Agr  & T      &  & T\_clas & T\_red & Agr  & T      &  & T\_clas & T\_red & Agr   & T       \\
+0         & 0.75    & 0.81   & 0.8  & 74.7   &  & 0.9     & 0.94   & 0.83 & 61     &  & 0.97    & 0.95   & 0.96  & 185.81  \\
+1         & 0.68    & 0.76   & 0.78 & 93.65  &  & 0.8     & 0.79   & 0.74 & 33.41  &  & 0.95    & 0.85   & 0.9   & 91.58   \\
+2         & 0.75    & 0.74   & 0.77 & 94.8   &  & 0.83    & 0.91   & 0.81 & 44.27  &  & 0.94    & 1      & 0.98  & 258.92  \\
+3         & 0.74    & 0.81   & 0.78 & 94.8   &  & 0.9     & 0.91   & 0.81 & 64.26  &  & 0.9     & 0.9    & 0.92  & 144.56  \\
+4         & 0.72    & 0.85   & 0.82 & 108.26 &  & 0.9     & 0.88   & 0.81 & 41.84  &  & 0.94    & 0.8    & 0.87  & 109.92  \\
+Media     & 0.728   & 0.794  & 0.79 & 93.242 &  & 0.866   & 0.886  & 0.8  & 48.956 &  & 0.94    & 0.9    & 0.926 & 158.158
+\end{tabular}\\
+
+Podemos ver que nuestro algoritmo que clasifica por el \textbf{vecino más cercano} tiene una efectividad considerable para clasificar objetos en estas bases de datos, con una media de aicerto que está por encima del 74\% en todos los conjuntos de datos que hemos usado como conjuntos de prueba. Además, es claramente el más rápido debido a la la simplicidad de este lgoritmo, no demorándose más de una centésima en ninguno de los casos. Además, como este algoritmo siempre considera todos los datos, la tasa de reducción es siempre cero. \\
+
+Los siguientes resultados que hemos reflejado en las tablas son los del algoritmo \textbf{Greedy Relief}. Sorprendentemente, estos resultados han resultado tener una tasa de acierto muy similiar al algoritmo del vecino más cercano. Sin embargo, en este caso tenemos tasas de reducción que ya no se anulan y los tiempos son mayores. Además, las tasas de agregación son más altas que en el algoritmo anterior, como era de de esperar.
+
+Por último, tenemos nuestro algoritmo más pesado, \textbf{búsqueda local}. Este algoritmo nos ha dado unos resultados bastante buenos en la clasificación y sobre todo nos ha dado unos valores de nuestra función objetivo bastante altos, lo que nos hace ver que nuestros vectores de pesos son bastante buenos a la hora de clasificar datos en los conjuntos de datos que se nos presentan. Sin embargo, los tiempos de ejecución han sido muy altos, mucho más de lo esperados. Esto puede ser debido a la suma de la probable ineficiencia de programación del algoritmo y la ineficiencia que nos aporta el lenguaje de programación escogido para programar estos algoritmos. A pesar del tiempo tan alto, llegando a una media de casi 3 minutos de ejecución por cada partición del conjunto de datos "Textura", los resultados obtenidos son satisfactorios.
+
+De los resultados también podemos obtener las siguientes conclusiones:
+\begin{itemize}
+	\item \emph{Colposcopy} es un conjunto de datos difíciles de clasificar comparado con los otros dos. Podría ser por tener menos ejemplos que los otros dos conjuntos o quizá porque los datos estén más dispersos y los ejemplos no representen bien a los representantes de cada clase.
+	
+	\item \emph{Texture} nos da un porcentaje de clasificación muy alto en todos los algoritmos, a pesar de ser el que más tipos de clases diferentes tiene. Probablemente esto sea porque las clases tienen características bien diferenciadas.
+	
+	
+	\item Todos los algoritmos han dado buenos resultados de clasificación en los \emph{Datasets} proporcionados, así que lo que los diferencia es el valor de la función objetivo en cada caso.
+\end{itemize}
+
+Como última comparativa, podemos mostrar la tabla de medias :\\
+\small\hspace{-2cm}\begin{tabular}{lllllllllllllll}
+ & \multicolumn{4}{c}{Colposcopy}   &  & \multicolumn{4}{c}{Ionosphere}   &  & \multicolumn{4}{c}{Texture}        \\
+ T\_clas & T\_red & Agr  & T      & & T\_clas & T\_red & Agr  & T      &  & T\_clas & T\_red & Agr   & T       \\
+     0.74     & 0       & 0.37  & 0 &  & 0.844    & 0       & 0.422 & 0 &  & 0.928   & 0      & 0.464 & 0.01\\
+     0.724   & 0.356  & 0.562 & 0.01 &  & 0.844   & 0.042  & 0.36 & 0.014 &  & 0.942   & 0.07   & 0.508 & 0.03\\
+	 0.728   & 0.794  & 0.79 & 93.242 &  & 0.866   & 0.886  & 0.8  & 48.956 &  & 0.94    & 0.9    & 0.926 & 158.158\\
+\end{tabular}\\
+
+En esta tabla podemos ver claramente las diferencias de tiempo que hay y la gran brecha que crea la \textbf{búsqueda local}(la última fila) respecto a Greedy(2ª fila) y 1-nn(1ª fila). Además, se muestra también cómo aumentan la tasa de reducción y el valor de la función objetivo cuando aumenta la complejidad de nuestro algoritmo, lo que lo hace en el caso general mucho más efectivo aunque el coste computacional y de tiempo sea mucho mayor.
+
+\end{document}

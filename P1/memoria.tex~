@@ -1,0 +1,56 @@
+% Created 2019-03-29 vie 15:24
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\newcommand*{\titleGP}{\begingroup % Create the command for including the title page in the document
+\centering % Center all text
+\vspace*{\baselineskip} % White space at the top of the page
+\rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal line
+\rule{\textwidth}{0.4pt}\\[\baselineskip] % Thin horizontal line
+{\LARGE THE BIG BOOK\\ OF \\[0.3\baselineskip] \LaTeX ~TEMPLATES}\\[0.2\baselineskip] % Title
+\rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal line
+\rule{\textwidth}{1.6pt}\\[\baselineskip] % Thick horizontal line
+\scshape % Small caps
+A number of fascinating and life-changing templates \\ % Tagline(s) or further description
+presented  in a clear and useable way \\[\baselineskip] % Tagline(s) or further description
+New Zealand,  2011--2012\par % Location and year
+\vspace*{2\baselineskip} % Whitespace between location/year and editors
+Edited by \\[\baselineskip]
+{\Large JOHN SMITH \\ JANE SMITH \\ JAMES SMITH\par} % Editor list
+{\itshape The University of California \\ Berkeley\par} % Editor affiliation
+\vfill % Whitespace between editor names and publisher logo
+{\scshape 2012} \\[0.3\baselineskip] % Year published
+{\large THE PUBLISHER}\par % Publisher
+\endgroup}
+\author{Javier Sáez Maldonado}
+\date{\today}
+\title{Aprendizaje de pesos en características}
+\hypersetup{
+ pdfauthor={Javier Sáez Maldonado},
+ pdftitle={Aprendizaje de pesos en características},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.1 (Org mode 9.1.9)}, 
+ pdflang={Spanish}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\#+latex\(_{\text{class}}\) : article
+
+\section{Introducción}
+\label{sec:org4024865}
+\end{document}
