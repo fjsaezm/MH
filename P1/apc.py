@@ -48,176 +48,106 @@ i = 0
 skf = StratifiedKFold(n_splits = 5)
 
 print("File: ", n1)
-#---------------------------
-#---------------------------
-#------- COLPOSCOPY --------
-#---------------------------
-#---------------------------
 for trainIndex , testIndex in skf.split(d1,c1):
     onennTime = 0
     greedyTime = 0
     localSTime = 0
     n = testIndex.shape[0]
-    onennRight = 0
-    greedyRight = 0
-    lsRight = 0
-    "Time for weights calc"
-    startTime = time.time()
-    greedyWeights = greedyRelief(d1[trainIndex],c1[trainIndex])
-    greedyTime += time.time() - startTime
-    ini_uniform_weights = np.random.uniform(0.0,1.0,d1.shape[1])
-    "Time for waeights calc"
-    startTime = time.time()
-    lsWeights = localSearch(ini_uniform_weights,d1[trainIndex],c1[trainIndex])
-    localSTime += time.time() - startTime
-
-    for element in testIndex:
-        startTime = time.time()
-        if one_nn(d1[trainIndex],c1[trainIndex],d1[element]) == c1[element]:
-            onennRight +=1
-        onennTime += time.time()-startTime
-
-        startTime = time.time()
-        if weighted_onenn(greedyWeights,d1[trainIndex],c1[trainIndex],d1[element]) == c1[element]:
-            greedyRight +=1
-        greedyTime += time.time() -startTime
-
-        startTime = time.time()
-        if weighted_onenn(lsWeights,d1[trainIndex],c1[trainIndex],d1[element]) == c1[element]:
-            lsRight += 1
-        localSTime += time.time() - startTime
-
-    "Save results"
-    resCol1NN[i][0] = onennRight/n
+    start = time.time()
+    t_clas_onenn = newone_nn(d1, c1,trainIndex,testIndex)
+    onennTime = time.time() - start
+    start = time.time()
+    t_clas_greedy, t_red_greedy = newgreedyRelief(d1,c1,trainIndex,testIndex)
+    greedyTime = time.time() - start
+    start = time.time()
+    t_clas_local, t_red_local = newLocalSearch(d1,c1,trainIndex,testIndex)
+    localSTime = time.time() - start
+    # "Save results"
+    resCol1NN[i][0] = t_clas_onenn
     resCol1NN[i][1] = 0 #its always 0 in this case
-    resCol1NN[i][2] = 0.5*(onennRight/n)
+    resCol1NN[i][2] = 0.5*t_clas_onenn
     resCol1NN[i][3] = onennTime
-    resColGR[i][0]  = greedyRight/n
-    resColGR[i][1]  = tasa_red(greedyWeights)
-    resColGR[i][2]  = f(greedyWeights,d1,c1)
+    resColGR[i][0]  = t_clas_greedy
+    resColGR[i][1]  = t_red_greedy
+    resColGR[i][2]  = 0.5*t_clas_greedy + 0.5*t_red_greedy
     resColGR[i][3]  = greedyTime
-    resColLS[i][0]  = lsRight/n
-    resColLS[i][1]  = tasa_red(lsWeights)
-    resColLS[i][2]  = f(lsWeights,d1,c1)
+    resColLS[i][0]  = t_clas_local
+    resColLS[i][1]  = t_red_local
+    resColLS[i][2]  = 0.5*t_clas_local + 0.5*t_red_local
     resColLS[i][3]  = localSTime
     i+=1
     print("Partition ",i)
 
-i = 0
-
-#---------------------------
-#---------------------------
-#------- IONOSPHERE --------
-#---------------------------
-#---------------------------
-
-print("File :", n2)
-for trainIndex , testIndex in skf.split(d2,c2):
-    onennTime = 0
-    greedyTime = 0
-    localSTime = 0
-    n = testIndex.shape[0]
-    onennRight = 0
-    greedyRight = 0
-    lsRight = 0
-    "Time for weights calc"
-    startTime = time.time()
-    greedyWeights = greedyRelief(d2[trainIndex],c2[trainIndex])
-    greedyTime += time.time() - startTime
-    ini_uniform_weights = np.random.uniform(0.0,1.0,d2.shape[1])
-    "Time for weights calc"
-    startTime = time.time()
-    lsWeights = localSearch(ini_uniform_weights,d2[trainIndex],c2[trainIndex])
-    localSTime += time.time() - startTime
-
-    for element in testIndex:
-        startTime = time.time()
-        if one_nn(d2[trainIndex],c2[trainIndex],d2[element]) == c2[element]:
-            onennRight +=1
-        onennTime += time.time()-startTime
-        startTime = time.time()
-        if weighted_onenn(greedyWeights,d2[trainIndex],c2[trainIndex],d2[element]) == c2[element]:
-            greedyRight +=1
-        greedyTime += time.time() -startTime
-        startTime = time.time()
-        if weighted_onenn(lsWeights,d2[trainIndex],c2[trainIndex],d2[element]) == c2[element]:
-            lsRight += 1
-        localSTime += time.time() - startTime
-
-    resIon1NN[i][0] = onennRight/n
-    resIon1NN[i][1] = 0 #its always 0 in this case
-    resIon1NN[i][2] = 0.5*(onennRight/n)
-    resIon1NN[i][3] = onennTime
-    resIonGR[i][0]  = greedyRight/n
-    resIonGR[i][1]  = tasa_red(greedyWeights)
-    resIonGR[i][2]  = f(greedyWeights,d2,c2)
-    resIonGR[i][3]  = greedyTime
-    resIonLS[i][0]  = lsRight/n
-    resIonLS[i][1]  = tasa_red(lsWeights)
-    resIonLS[i][2]  = f(lsWeights,d2,c2)
-    resIonLS[i][3]  = localSTime
-    i+=1
-    print("Partition ",i)
     
 
 i = 0
 
 
-#---------------------------
-#---------------------------
-#--------- TEXTURE ---------
-#---------------------------
-#---------------------------
+print("File: ", n2)
+for trainIndex , testIndex in skf.split(d2,c2):
+    onennTime = 0
+    greedyTime = 0
+    localSTime = 0
+    n = testIndex.shape[0]
+    start = time.time()
+    t_clas_onenn = newone_nn(d2, c2,trainIndex,testIndex)
+    onennTime = time.time() - start
+    start = time.time()
+    t_clas_greedy, t_red_greedy = newgreedyRelief(d2,c2,trainIndex,testIndex)
+    greedyTime = time.time() - start
+    start = time.time()
+    t_clas_local, t_red_local = newLocalSearch(d2,c2,trainIndex,testIndex)
+    localSTime = time.time() - start
+    # "Save results"
+    resIon1NN[i][0] = t_clas_onenn
+    resIon1NN[i][1] = 0 #its always 0 in this case
+    resIon1NN[i][2] = 0.5*t_clas_onenn
+    resIon1NN[i][3] = onennTime
+    resIonGR[i][0]  = t_clas_greedy
+    resIonGR[i][1]  = t_red_greedy
+    resIonGR[i][2]  = 0.5*t_clas_greedy + 0.5*t_red_greedy
+    resIonGR[i][3]  = greedyTime
+    resIonLS[i][0]  = t_clas_local
+    resIonLS[i][1]  = t_red_local
+    resIonLS[i][2]  = 0.5*t_clas_local + 0.5*t_red_local
+    resIonLS[i][3]  = localSTime
+    i+=1
+    print("Partition ",i)
 
-print("File:  ", n3)
+i = 0
+
+print("File: ", n3)
 for trainIndex , testIndex in skf.split(d3,c3):
     onennTime = 0
     greedyTime = 0
     localSTime = 0
     n = testIndex.shape[0]
-    onennRight = 0
-    greedyRight = 0
-    lsRight = 0
-    "Time for weights calc"
-    startTime = time.time()
-    greedyWeights = greedyRelief(d3[trainIndex],c3[trainIndex])
-    greedyTime += time.time() - startTime
-    ini_uniform_weights = np.random.uniform(0.0,1.0,d3.shape[1])
-    "Time for waeights calc"
-    startTime = time.time()
-    lsWeights = localSearch(ini_uniform_weights,d3[trainIndex],c3[trainIndex])
-    localSTime += time.time() - startTime
-
-    for element in testIndex:
-        startTime = time.time()
-        if one_nn(d3[trainIndex],c3[trainIndex],d3[element]) == c3[element]:
-            onennRight +=1
-        onennTime += time.time()-startTime
-        startTime = time.time()
-        if weighted_onenn(greedyWeights,d3[trainIndex],c3[trainIndex],d3[element]) == c3[element]:
-            greedyRight +=1
-        greedyTime += time.time() -startTime
-        startTime = time.time()
-        if weighted_onenn(lsWeights,d3[trainIndex],c3[trainIndex],d3[element]) == c3[element]:
-            lsRight += 1
-        localSTime += time.time() - startTime
-
-
-    resText1NN[i][0] = onennRight/n
+    start = time.time()
+    t_clas_onenn = newone_nn(d3, c3,trainIndex,testIndex)
+    onennTime = time.time() - start
+    start = time.time()
+    t_clas_greedy, t_red_greedy = newgreedyRelief(d3,c3,trainIndex,testIndex)
+    greedyTime = time.time() - start
+    start = time.time()
+    t_clas_local, t_red_local = newLocalSearch(d3,c3,trainIndex,testIndex)
+    localSTime = time.time() - start
+    # "Save results"
+    resText1NN[i][0] = t_clas_onenn
     resText1NN[i][1] = 0 #its always 0 in this case
-    resText1NN[i][2] = 0.5*(onennRight/n)
+    resText1NN[i][2] = 0.5*t_clas_onenn
     resText1NN[i][3] = onennTime
-    resTextGR[i][0]  = greedyRight/n
-    resTextGR[i][1]  = tasa_red(greedyWeights)
-    resTextGR[i][2]  = f(greedyWeights,d3,c3)
+    resTextGR[i][0]  = t_clas_greedy
+    resTextGR[i][1]  = t_red_greedy
+    resTextGR[i][2]  = 0.5*t_clas_greedy + 0.5*t_red_greedy
     resTextGR[i][3]  = greedyTime
-    resTextLS[i][0]  = lsRight/n
-    resTextLS[i][1]  = tasa_red(lsWeights)
-    resTextLS[i][2]  = f(lsWeights,d3,c3)
+    resTextLS[i][0]  = t_clas_local
+    resTextLS[i][1]  = t_red_local
+    resTextLS[i][2]  = 0.5*t_clas_local + 0.5*t_red_local
     resTextLS[i][3]  = localSTime
-            
-    i +=1
+    i+=1
     print("Partition ",i)
+
+
 
 print("Finished algorithms\n")
 print("\nResults for 1NN")
