@@ -122,7 +122,7 @@ def newLocalSearch(data,classes,testIndex,trainIndex):
 
     testD  = np.copy(data[testIndex])
     testC  = np.copy(classes[testIndex])
-    fmax   = tasa_clas(w,trainD,trainC)
+    fmax   = (tasa_clas(w,trainD,trainC)+tasa_red(w))*0.5
 
     nneighs = 0
     it      = 0
@@ -186,17 +186,17 @@ def BLX(c1,c2):
 def arithmeticCross(c1,c2):
     return (numpy.array(c1)+numpy.array(c2))/2
 
-#def eval
 
+# Returns index to best of selection
 def selection(population,fitness):
     i1 = randint(0,len(population)-1)
     i2 = randint(0,len(population)-1)
     if fitness[i1] > fitness[i2]:
-        return population[i1]
+        return i1
     else:
-        return population[i2]
-    
-    
+        return i2
+
+
 def goGenetic(data,classes,trainIndex,testIndex,cross_operator):
     total_genes = sizeAGG*data.shape[1]
     population = []
@@ -204,38 +204,45 @@ def goGenetic(data,classes,trainIndex,testIndex,cross_operator):
     #Generation of population
     for i in range(sizeAGG):
         population.append(np.random.uniform(0.0,1.0,len(data[0])))
-        fitness.append(tasa_clas(population[i],data[trainIndex],classes[trainIndex]))
+        fit = 0.5*(tasa_clas(population[i],data[trainIndex],classes[trainIndex]) + tasa_red(population[i]))
+        fitness.append(fit)
 
     generation = 1
     #first sizeAGG iterations
     it   = sizeAGG
     #Number of chromosomes to be crossed
     to_be_crossed = int(pcross* (len(population)/2))
+    #Number of chromosomes to mutate. Minimum is 1
+    to_mutate = max(int(pmut*len(population)),1)
 
     #stop criterion: max_iteration evaluations
     while it < max_iterations:
 
         new_population = []
+        new_fitness    = []
         bestParentIndex = np.argmax(fitness)
 
         #Selection operator
         for i in range (len(population)):
-            new_population.append(selection(population,fitness))
+            index = selection(population,fitness)
+            new_population.append(population[index])
+            new_fitness.append(fitness[index])
+            
 
-        
         #Cross operator
         for k in range (to_be_crossed*2):
             if cross_operator == BLX_operator:
                 h1,h2 = BLX(new_population[k],new_population[k+1])
                 new_population[k] = h1
                 new_population[k+1] = h2
+                new_fitness[k]    = -1.0
+                new_fitness[k+1]  = -1.0
                 k +=1
             else:
-                new_population[i] = arithmeticCross(new_population[i],new_population[2*sizeAGG - i])
+                new_population[k] = arithmeticCross(new_population[k],new_population[2*sizeAGG - k])
+                new_fitness[k]    = -1.0
 
-
-        #Number of chromosomes to mutate. Minimum is 1
-        to_mutate = max(int(pmut*len(population)),1)
+        
         muted_population = new_population
         #We use possibilities to avoid repetition of value
         possibilities = []
@@ -247,17 +254,24 @@ def goGenetic(data,classes,trainIndex,testIndex,cross_operator):
             indexChromosome = possibilities[indexPossib]
             indexGen        = np.random.randint(0,len(population[0]))
             muted_population[indexChromosome] = mov(muted_population[indexChromosome],indexGen)
+            new_fitness[indexChromosome] = -1.0
             possibilities.pop(indexPossib)
             
     
         new_population = np.copy(muted_population)
-        new_fitness    = []
 
-       
-        for w in new_population:
-            new_fitness.append(tasa_clas(w,data[trainIndex],classes[trainIndex]))
+        start = time.time()
+        #Evaluate new population
+        newEvs = 0
+        for i in range (len(new_population)):
+            if new_fitness[i] == -1.0:
+                new_fitness[i] = 0.5*(tasa_clas(new_population[i],data[trainIndex],classes[trainIndex]) + tasa_red(population[i]))
+                newEvs+=1
+
             it += 1
-      
+
+        print(time.time() - start)
+        print(newEvs)
         print(it)
 
         #Elitism
