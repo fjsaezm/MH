@@ -4,7 +4,7 @@ from algorithms import *
 sizeAGG = 30
 pcross= 0.7
 pmut  = 0.001
-gen_max_it = 3000
+gen_max_it = 200
 np.random.seed(2019)
 
 
@@ -15,7 +15,7 @@ class Chromosome:
         else:
             self.w = np.copy(weights)
             
-        self.fitness = 0.5*(tasa_clas(self.w,data,classes))
+        self.fitness = 0.5*(tasa_clas(self.w,data,classes) + tasa_red(self.w))
 
         
 #Alpha is 0.3

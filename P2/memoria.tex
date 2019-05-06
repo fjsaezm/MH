@@ -83,11 +83,9 @@
 
 \end{titlepage}
 
-\section*{Nota previa}
-La ejecución del programa que he escrito en python es \emph{demasiado} lenta. El tiempo medio de ejecución completa es de 25 minutos en mi ordenador portátil que dispone de \emph{Intel Core i7-4510U CPU @ 2.00GHz x 4 } y el sistema operativo Manjaro Linux. Es por ello que se recomienda que no se ejecute el programa o se modifique si se quiere comprobar el funcionamiento.
 
 \section{Introducción}
-El problema de clasificación consiste en, dado un conjunto $A=\{(a,b) \ : a \in R^n, b \ es \ una \ clase\}$ de datos ya clasificados, obtener un sistema que permita clasificar un objeto nuevo de forma automática.\\
+El problema de clasificación consiste en, dado un conjunto $A=\{(a,b) \ : a \in R^n, b \ es \ una \ clase\}$ de datos ya clasificados, obtener un sistema que permita clasificar un objeto nuevo de forma automática. En este caso, dado que conocemos de antemano las clases de los objetos que queremos clasificar, podemos afirmar que se trata de una situación de \textbf{aprendizaje supervisado}\\
 
  Un ejemplo de clasificador, y el que utilizaremos en esta práctica,es el $k-NN$ , $k$ vecinos más cercanos. Este toma la clase que más se repita entre los $u_i\in A$ tales que su distancia al nuevo elemento $u$ sea mínima. En nuestro caso, en una versión sencilla del problema, consideraremos el clasificador $1-NN$. \\
 
@@ -102,9 +100,21 @@ F(w) = \alpha T_{clas}(w) + (1-\alpha)T_{red}(w)
 \]
 Donde
 \begin{itemize}
-\item $T_{clas}$ es la función que indica cómo de bueno es nuestro clasificador, es decir, cuántos casos ha clasificado correctamente si entrenamos el clasificador usando el resto de datos ,la técnica \emph{k-fold cross validation}, y dejando un elemento fuera (leave one out).
+\item $T_{clas}$ es la función que indica cómo de bueno es nuestro clasificador, es decir, cuántos casos ha clasificado correctamente si entrenamos el clasificador usando el resto de datos ,la técnica \emph{k-fold cross validation}, y dejando un elemento fuera (leave one out). En nuestro caso, $k$ será $5$ (haremos 5 particiones de cada conjunto de datos).
+\[
+tasa_{clas} = \frac{instancias \ \ bien \ \ clasificadas}{instancias \ \ totales} *100
+\]
 	\item $T_{red}$ que es la función que nos indica cuántas características de un dato tienen un peso menor que un valor establecido, en nuestro caso $0.2$.
+	\[
+	tasa_{red} = \frac{|\{w_i \ : \ w_i < 0.2\}|}{size(w)}*100
+	\]
+	
+	\item $\alpha$ en nuestro caso será $0.5$, dado la misma importancia a ambos elementos anteriores.
 \end{itemize}
+
+
+En cada partición, se establecerá un conjunto de datos de entrenamiento y un conjunto de datos de prueba de cada \emph{Dataset}. El conjunto de datos de entrenamiento, nos servirá para conseguir aproximarnos a nuestro vector de pesos solución,y el conjunto de datos de prueba nos servirá para establecer cómo de bueno es nuestro vector solución encontrado.
+
 
 
 \section{Descripción de la aplicación de los algoritmos}
@@ -117,6 +127,12 @@ Los datos de entrada que tenemos para nuestro problema tienen los siguientes ele
 	\item Clase del elemento, que es la categoría a la que corresponde el mismo
 	\item Ejemplo, que es un par que tiene un vector de características y una clase
 	\item Conjunto de datos, que contendrá una lista de ejemplos
+	
+	\item \textbf{class Chromosome}. Para esta práctica, he creado una clase Cromosoma que encapsula un elemento de la población. Esta clase únicamente contiene dos datos miembro que son:
+\begin{itemize}
+	\item Un vector de características
+	\item El \emph{fitness} de estas características, que es justamente el valor que toma la función de evaluación sobre este vector de características usado para clasificar los elementos del conjunto de entrenamiento usando \emph{Leave One Out} y 
+\end{itemize}
 
 \end{itemize}
 De ellos , obtendremos una solución que será un vector $w$ de pesos, valores reales también en el intervalo $[0,1]$
@@ -124,9 +140,35 @@ De ellos , obtendremos una solución que será un vector $w$ de pesos, valores r
 \subsection{Operadores comunes}
 Vamos a describir ahora dos funcionalidades comunes a todos los algoritmos que hemos utilizado para la realización de la práctica.\\
 
-La función \emph{normalizeData} se encarga de dado un vector de datos (que puede ser de tamaño 1), normalizarlos al intervalo $[0,1]$\\
+\begin{enumerate}
+	\item Creación de particiones. Para crear nuestras particiones hemos utilizado una funcionalidad de la librería \emph{SKlearn} de python. Esta funcionalidad se llama \textbf{StratifiedKFold} y nos permite hacer particiones en las que los datos se distribuyan idénticamente y sean así idóneas para nuestro análisis. Al llamar a la función:
+	\[
+	skf \ \ = \ \ StratifiedKFold(n_splits = 5)
+	\]
+y, posteriormente realicemos la llamada:
+\[
+skf.split(data,classes)
+\]
+Se nos devolverán 10 vectores de índices, 5 para las particiones de los conjuntos de datos de entrenamiento y 5 para los conjuntos de datos de prueba.
 
-La función \emph{weighted$\_$onenn} es la función que nos da el vecino más cercano a otro utilizando el algoritmo $1-NN$, usando un vector de pesos dado. La utilizaremos dando diferentes vectores de pesos $w$ para obtener diferentes resultados de clasificación.\\
+	\item La función \emph{normalizeData} se encarga de ,dado un vector de datos (que puede ser de tamaño 1), normalizarlos al intervalo $[0,1]$\\
+\end{enumerate}
+
+
+
+La función \emph{newone\_nn} es la función que nos da la tasa de acierto al tratar de clasificar un conjunto de datos de prueba que se le pasan como parámetro, comparándolos con un conjunto de datos de entrenamiento que también se le pasan como parámetro. Esta función se utiliza en muchas partes de nuestro código, y se asume que tanto los datos de entrenamiento como los de prueba vendrán desde fuera de ella multiplicados por un vector de pesos en concreto, si este fuera distinto del vector de unos.  Para realizarla, hemos utilziado el clasificador que nos aporta \emph{sklearn}, \textbf{KNeighborsClassifier}. El esqueleto de esta función es el siguiente:
+\begin{algorithmic}[1]
+\Procedure{newone$\_$nn}{data,classes,trainIndex,testIndex}
+\State $classifier \gets KNeighborsClassifier(n_neighbors = 1)$
+\State //ajustamos el clasificador a los datos de entrenamiento
+\State classfier.fit(data[trainIndex],classes[trainIndex])
+\State predictions = []
+\State predictions = classifier.predict(data[testIndex])
+\State $ret \gets accuracy(classes[testIndex],predictions)$
+\State \textbf{return} ret
+
+\EndProcedure
+\end{algorithmic}
 
 El resto de funcionalidades que se han utilizado se han hecho en cada algoritmo concreto, debido a la facilidad que nos da el lenguaje de programación escogido para la programación de estos operadores.
 
@@ -135,7 +177,7 @@ En nuestro caso, se nos indica que tomemos como $alpha$ el valor $0.5$, así que
 \[
 F(w) = 0.5(T_{clas}(w) + T_{red}(w))
 \]
-Calcularemos $T_{class}$ de la siguiente manera:\\
+Calcularemos $T_{class}$ utilizando la función \emph{newone$\_$nn} que hemos explicado anteriormente, cuyo método \emph{accuracy} hará lo siguiente:\\
 \begin{algorithmic}[1]
 \Procedure{T-class}{guess,classes}
 \State n = 0
@@ -160,41 +202,45 @@ $n \gets n+1$
 \EndProcedure
 \end{algorithmic}
 
-
+\newpage
 \section{Estructura del método de búsqueda}
-\subsection{Algoritmo Greedy Relief}
-Este algoritmo recorre todo el conjunto de datos punto por punto y , en cada uno, modifica el vector de pesos según el ejemplo enemigo y amigo más cercanos. Lo que haremos será , por cada punto, partir el conjunto de datos en un conjunto de datos "amigos" (que tienen su misma clase), y "enemigos" (que no tienen su misma clase), y luego obtendremos de cada uno el "vecino más cercano". El procedimiento para obtener el conjunto de enemigos(y el de amigos, pues son idénticos) es el siguiente:\\
 
-\begin{algorithmic}[1]
-\Procedure{getEnemies}{data,dClasses,example,exampleClass}
-\BState \emph{loop} : $i = 0,...,data.size$
-\If {dClasses(i) = exampleClass}
-$enemies \gets data(i)$
+Vamos a pasar a comentar cómo realizamos la búsqueda de soluciones a nuestro problema en esta nueva práctica
+
+\subsection{Comentario General}
+En los algoritmos implementados en esta práctica, véase:
+\begin{itemize}
+	\item Algoritmos genéticos en varias variantes
+	\item Algoritmos meméticos también en varias variantes
+\end{itemize}
+Tenemos una serie de elementos que nos ayudan a esquematizar cada algoritmo. De hecho, esto ha sido bastante útil a la hora de realizar el código pues hemos podido , a partir de un esqueleto de función, pasar un parámetr que nos indique qué variante tendremos que aplicar y ahorrar así mucho código. En un \textbf{algoritmo genético}, los pasos que realizaremos son:
+\begin{enumerate}
+	\item \textbf{Población inicial}: Esta población en cada algoritmo y cada partición se genera siempre creando objetos del tipo \emph{Chromosome} que habíamos definido anteriormente. Para crear un objeto de este tipo, tenemos un constructor que es el siguiente:
+	\begin{algorithmic}[1]
+\Procedure{Chromosome}{data,classes,weights = []}
+\State // el valor por defecto de Weights es vacío
+\If {len(weights) == 0} //Esto es,si no se le pasa un vector de pesos predeterminado
+\State Chromose.w $\gets$ random.uniforme(0,1,tamanio = data.size)
 \EndIf
-\State \textbf{return} enemies
+\State \textbf{else}: Chromosome.w $\gets weights$
+
+\State Chromosome.fitness = 0.5(tasa$\_$clas(Chromosome.w,data,classes) + 
+\State $\quad \quad \quad \quad \quad \quad \quad \quad \quad \quad$tasa$\_$red(Chromosome.w))
+
 \EndProcedure
 \end{algorithmic}
+Así, cuando se llame al constructor para generar la población inicial, se llamará con el vector $weights$ vacío para que se genere uno aleatorio
 
+\item \textbf{Operador de selección:} Este operador tomará la población y seleccionará dos individuos aleatorios de la misma para realizar un torneo binario con ellos. Los vencedores se irán añadiendo a un nuevo vector de población que será el que siga adelante en la generación.
 
+\item \textbf{Operador de cruce:} La población generada por la selección se cruzará de la siguiente forma: Se tomarán dos elementos de esta población y se les aplicará una función que generará dos hijos. Se cruzarán un número determinado de padres en cada algoritmo. 
 
-Al final, implementamos la función \emph{greedyRelief}: 
-\begin{algorithm}
-\caption{Greedy Relief}\label{euclid}
-\begin{algorithmic}[1]
-\Procedure{greedyRelief}{data, classes}
-\State $w \gets 0$
-\BState \emph{loop}: $i = 0,...,data.size$
-\State $friends \gets getFriends$
-\State $enemies \gets getEnemies$
-\State $closestFriend \gets min(distance(friends,data(i))$
-\State $closestEnemy \gets min(distance(enemies,data(i))$
-\State $w \gets w + |data(i) - closestEnemy| - |data(i)-closestFriend|$
-\BState \emph{endloop}
-\State $w \gets normalize(w)$
-\State \textbf{return} w
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
+\item \textbf{Operador de mutación:} Este operador toma un elemento de la población actual y varía su vector de pesos (le produce una mutación). La mutación se produce sobre una característica aleatoria del vector de pesos, y si se hace más de una mutación, no se repite esta característica.
+
+\item \textbf{Reemplazamiento}: Tras realizar lo anterior con una población, se determinará qué individuos pasan a la siguiente generación para seguir siendo evaluados y cuáles se pierden.
+\end{enumerate}
+
+En nuestr caso, el tamaño de población para algoritmos genéticos será de 30, y en los algoritmos meméticos será de 10 individuos.
 
 \subsection{Búsqueda local}
 Para este algoritmo, debemos definir el algoritmo que hemos usado para obtener una mutación de un ejemplo. Al mutar, sumaremos a la componente $j$ un valor aleatorio y truncaremos al intervalo $[0,1]$ si el nuevo valor se nos escapara del intervalo:
@@ -208,9 +254,6 @@ Para este algoritmo, debemos definir el algoritmo que hemos usado para obtener u
 En el procedimiento de cálculo de pesos mediante la búsqueda local intervendrá la función de evaluación, que será notada por $f(w)$.
 
 Así, el procedimiento general para la generación de pesos para la búsqueda local sería:
-
-
-
 
 
 \begin{algorithm}
@@ -237,8 +280,86 @@ $w \gets copy$
 
 Para completar este algoritmo, habría que añadir un contador para que contara un número de iteraciones máximo que se pudiera hacer para generar un número máximo de vecinos , pero esto no se ha incluido en el pseudocódigo.
 
-%\subsection{Casos de comparación}
+\subsection{Casos de comparación}
+Como algoritmos de comparación, hemos usado los 3 utilizados en la práctica anterior:
+\begin{itemize}
+	\item $1-nn$
+	\item Greedy Relief
+	\item Búsqueda Local
+\end{itemize}
+Búsqueda Local y $1-nn$ ya han sido comentados anteiormente en este documento, es por tanto que procedo a explicar algunos aspectos de Greedy Relief
+\subsubsection{Algoritmo Greedy Relief}
+Este algoritmo recorre todo el conjunto de datos punto por punto y , en cada uno, modifica el vector de pesos según el ejemplo enemigo y amigo más cercanos. Lo que haremos será , por cada punto, partir el conjunto de datos en un conjunto de datos "amigos" (que tienen su misma clase), y "enemigos" (que no tienen su misma clase), y luego obtendremos de cada uno el "vecino más cercano". Tras hallar el vector de pesos correspondiente, nuestro algoritmo clasificará los datos a los que se les aplica el vector de pesos correspondiente y devolverá la tasa de clasificación y la de reducción de nuestro vector de pesos $w$ hallado.\\
+ El procedimiento para obtener el conjunto de enemigos es el siguiente:
 
+\begin{algorithmic}[1]
+\Procedure{getEnemies}{data,classes,indexExample}
+\State $aux \gets data$
+\State $val\_sol \gets 100000.0$ //Inicialización
+\State //Sumamos las características para hallar la distancia, todas positivas
+\State $val_i \gets sum(data[index])$
+\BState \emph{loop} : $i = 0...aux.size$
+\State $actual \gets sum(aux[i])$
+\State $dist \gets (val_i - actual)^2$
+\If {$dist < val\_sol \ \ and \ \ classes[j] != classes[indexExample]$}
+\State $sol \gets j$
+\State $val_sol \gets dist$
+\EndIf
+
+\State \textbf{return} data[sol]
+
+\EndProcedure
+\end{algorithmic}
+La función de encontrar amigos será muy parecida, solo que tendremos que tener en cuenta que un amigo no podrá ser él mismo, por lo que tendremos que hacer una pequeña modificación en el código:
+\begin{algorithmic}[1]
+\Procedure{getFriend}{data,classes,indexExample}
+\State $aux \gets data$
+\State $val\_sol \gets 100000.0$ //Inicialización
+\State $aux \gets aux.delete(indexExample)$ // Eliminamos a ñel mismo
+\State //Sumamos las características para hallar la distancia, todas positivas
+\State $val_i \gets sum(data[index])$
+\BState \emph{loop} : $i = 0...aux.size$
+\State $actual \gets sum(aux[i])$
+\State $dist \gets (val_i - actual)^2$
+\If {$dist < val\_sol \ \ and \ \ classes[j] == classes[indexExample]$}
+\State $sol \gets j$
+\State $val_sol \gets dist$
+\EndIf
+
+\State \textbf{return} data[sol]
+
+\EndProcedure
+\end{algorithmic}
+
+
+Al final, implementamos la función \emph{greedyRelief}: 
+\begin{algorithm}
+\caption{Greedy Relief}\label{euclid}
+\begin{algorithmic}[1]
+\Procedure{greedyRelief}{data, classes,trainIndex,testIndex}
+\State $w \gets 0$
+\BState \emph{loop}: $i = 0,...,data.size$
+\State $closestFriend \gets findFriend(data,classes,i)$
+\State $closestEnemy \gets min(distance(enemies,data(i))$
+\State $w \gets w + |data(i) - closestEnemy| - |data(i)-closestFriend|$
+\BState \emph{endloop}
+\State //"normalize" vector
+\State $maxVal \gets max(w)$
+\BState \emph{loop} : $i = 0...w.size$
+\State if $w[i] < 0 \implies w[i]=0$
+\State else $w[i] = w[i]/maxVal$
+\BState \emph{endloop}
+\State //Preparar datos para clasificar
+\State $trainDataW \gets data[trainIndex] * w$
+\State $testDataW \gets data[testIndex]*w$
+\State $clasificador \gets$ clasificador $knn$ con $n=1$ de sklearn
+\State $clasficador.fit(trainDataW,classes[trainIndex])$
+\State $predicciones\gets predecir(testDataW)$
+\State $porcentaje \gets accuracy(predicciones,classes[testIndex])$
+\State \textbf{return} porcentaje, $tasa_{red}(w)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 
 \section{Procedimiento considerado para desarrollar la práctica}
 Para desarrollar la práctica, he usado \textbf{Python} como lenguaje de programación, sin usar ningún framework de metaheurísticas.

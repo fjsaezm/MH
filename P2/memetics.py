@@ -41,7 +41,7 @@ def AM(data,classes,trainIndex,testIndex,cross_operator,typeMemetic):
     to_mutate = max(int(pmut*len(population)),1)
 
     #stop criterion: max_iteration evaluations
-    while it < 200:
+    while it < 130:
 
         s = time.time()
         new_population = []
