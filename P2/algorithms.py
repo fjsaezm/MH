@@ -6,19 +6,15 @@ from sklearn.model_selection import LeaveOneOut
 from numpy.random import normal
 from sklearn.metrics import accuracy_score
 from random import randint
+from sklearn.utils import shuffle
 
 from sklearn.neighbors import KNeighborsClassifier
 import time
 
 
-BLX_operator   = 1
-ARI_operator   = 2
 max_iterations = 15000
-sizeAGG = 30
 alpha = 0.5
-pcross= 0.7
-pmut  = 0.001
-np.random.seed(2019)
+
 
 def newone_nn(data,classes,trainIndex,testIndex):
 
@@ -168,140 +164,3 @@ def newLocalSearch(data,classes,testIndex,trainIndex):
 
     return tclas,tred
 
-
-#Alpha is 0.3
-def BLX(c1,c2):
-    cmax  = max([max(c1),max(c2)])
-    cmin  = min([min(c1),min(c2)])
-    l     = cmax - cmin
-    #interval is [a,b]
-    a     = cmin - l*0.3
-    b     = cmax + l*0.3
-
-    H1 = np.random.uniform(a,b,len(c1))
-    H2 = np.random.uniform(a,b,len(c2))
-
-    return H1,H2
-
-def arithmeticCross(c1,c2):
-    return (numpy.array(c1)+numpy.array(c2))/2
-
-
-# Returns index to best of selection
-def selection(population,fitness):
-    i1 = randint(0,len(population)-1)
-    i2 = randint(0,len(population)-1)
-    if fitness[i1] > fitness[i2]:
-        return i1
-    else:
-        return i2
-
-
-def goGenetic(data,classes,trainIndex,testIndex,cross_operator):
-    total_genes = sizeAGG*data.shape[1]
-    population = []
-    fitness    = []
-    #Generation of population
-    for i in range(sizeAGG):
-        population.append(np.random.uniform(0.0,1.0,len(data[0])))
-        fit = 0.5*(tasa_clas(population[i],data[trainIndex],classes[trainIndex]) + tasa_red(population[i]))
-        fitness.append(fit)
-
-    generation = 1
-    #first sizeAGG iterations
-    it   = sizeAGG
-    #Number of chromosomes to be crossed
-    to_be_crossed = int(pcross* (len(population)/2))
-    #Number of chromosomes to mutate. Minimum is 1
-    to_mutate = max(int(pmut*len(population)),1)
-
-    #stop criterion: max_iteration evaluations
-    while it < max_iterations:
-
-        new_population = []
-        new_fitness    = []
-        bestParentIndex = np.argmax(fitness)
-
-        #Selection operator
-        for i in range (len(population)):
-            index = selection(population,fitness)
-            new_population.append(population[index])
-            new_fitness.append(fitness[index])
-            
-
-        #Cross operator
-        for k in range (to_be_crossed*2):
-            if cross_operator == BLX_operator:
-                h1,h2 = BLX(new_population[k],new_population[k+1])
-                new_population[k] = h1
-                new_population[k+1] = h2
-                new_fitness[k]    = -1.0
-                new_fitness[k+1]  = -1.0
-                k +=1
-            else:
-                new_population[k] = arithmeticCross(new_population[k],new_population[2*sizeAGG - k])
-                new_fitness[k]    = -1.0
-
-        
-        muted_population = new_population
-        #We use possibilities to avoid repetition of value
-        possibilities = []
-        for k in range (len(population)):
-            possibilities.append(k)  
-        #Mutation operator
-        for k in range (to_mutate):
-            indexPossib = np.random.randint(0,len(possibilities))
-            indexChromosome = possibilities[indexPossib]
-            indexGen        = np.random.randint(0,len(population[0]))
-            muted_population[indexChromosome] = mov(muted_population[indexChromosome],indexGen)
-            new_fitness[indexChromosome] = -1.0
-            possibilities.pop(indexPossib)
-            
-    
-        new_population = np.copy(muted_population)
-
-        start = time.time()
-        #Evaluate new population
-        newEvs = 0
-        for i in range (len(new_population)):
-            if new_fitness[i] == -1.0:
-                new_fitness[i] = 0.5*(tasa_clas(new_population[i],data[trainIndex],classes[trainIndex]) + tasa_red(population[i]))
-                newEvs+=1
-
-            it += 1
-
-        print(time.time() - start)
-        print(newEvs)
-        print(it)
-
-        #Elitism
-        newBestIndex = np.argmax(new_fitness)
-        if new_fitness[newBestIndex] < fitness[bestParentIndex]:
-            #mistake is here in delete
-            new_population = np.delete(new_population,newBestIndex,axis = 0)
-            new_fitness    = np.delete(new_fitness,newBestIndex)
-            new_population = np.vstack((new_population,population[bestParentIndex]))
-
-            new_fitness    = np.append(new_fitness,fitness[bestParentIndex])
-                                  
-        population = np.copy(new_population)
-        fitness    = np.copy(new_fitness)
-        generation += 1
-
-
-    finalW = fitness.index(max(fitness))
-    trainD = np.copy(data[trainIndex])
-    trainC = np.copy(classes[trainIndex])
-    testD  = np.copy(data[testIndex])
-    testC  = np.copy(classes[testIndex])
-
-    classifier = KNeighborsClassifier(n_neighbors = 1)
-    classifier.fit(trainD,trainC)
-
-    predictions = classifier.predict(testD)
-    t_clas_ret  = accuracy_score(testC,predictions)*100
-    t_red_ret   = tasa_red(finalW)
-    
-
-    #need to return the tasa_class or the number of generations!
-    return t_clas_ret, t_red_ret
